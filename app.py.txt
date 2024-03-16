@@ -1,0 +1,44 @@
+from flask import Flask, render_template, request
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf import FlaskForm
+from wtforms import StringField, IntegerField
+from wtforms.validators import InputRequired, Email
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = 'your_secret_key'
+db = SQLAlchemy(app)
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), nullable=False, unique=True)
+    age = db.Column(db.Integer, nullable=False)
+    dob = db.Column(db.Date, nullable=False)
+
+class UserForm(FlaskForm):
+    name = StringField('Name', validators=[InputRequired()])
+    email = StringField('Email', validators=[InputRequired(), Email()])
+    age = IntegerField('Age', validators=[InputRequired()])
+    dob = StringField('Date of Birth', validators=[InputRequired()])
+
+@app.route('/')
+def index():
+    form = UserForm()
+    return render_template('index.html', form=form)
+
+@app.route('/submit', methods=['POST'])
+def submit():
+    form = UserForm(request.form)
+    if form.validate():
+        user = User(name=form.name.data, email=form.email.data, age=form.age.data, dob=form.dob.data)
+        db.session.add(user)
+        db.session.commit()
+        return 'Data submitted successfully!'
+    else:
+        return 'Form validation failed!'
+
+if __name__ == '__main__':
+    db.create_all()
+    app.run(debug=True)
